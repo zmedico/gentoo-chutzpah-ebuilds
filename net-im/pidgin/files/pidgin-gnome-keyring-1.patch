@@ -1,6 +1,6 @@
-diff -ur pidgin-2.7.1.orig//configure.ac pidgin-2.7.1//configure.ac
---- pidgin-2.7.1.orig//configure.ac	2010-05-29 21:23:56.000000000 -0400
-+++ pidgin-2.7.1//configure.ac	2010-07-20 23:25:59.520998076 -0400
+diff -ur pidgin-2.7.1.orig/configure.ac pidgin-2.7.1/configure.ac
+--- pidgin-2.7.1.orig/configure.ac	2010-05-29 21:23:56.000000000 -0400
++++ pidgin-2.7.1/configure.ac	2010-07-20 23:25:59.520998076 -0400
 @@ -2393,6 +2393,20 @@
  	LDFLAGS="$orig_LDFLAGS"
  fi
@@ -14,22 +14,22 @@ diff -ur pidgin-2.7.1.orig//configure.ac pidgin-2.7.1//configure.ac
 +                             [use gnome keyring for storing password [default=no]]),,
 +              enable_gnome_keyring=no)
 +if test "x$enable_gnome_keyring" = "xyes"; then
-+    PKG_CHECK_MODULES(GAIM_KEYRING,
++    PKG_CHECK_MODULES(PIDGIN_KEYRING,
 +                      gnome-keyring-1,
-+                      AC_DEFINE(GAIM_ENABLE_KEYRING, [], [Set if we should use gnome-keyring]))
++                      AC_DEFINE(PIDGIN_ENABLE_KEYRING, [], [Set if we should use gnome-keyring]))
 +fi
 +
  AC_MSG_CHECKING(for me pot o' gold)
  AC_MSG_RESULT(no)
  AC_CHECK_FUNCS(gethostid lrand48)
-diff -ur pidgin-2.7.1.orig//libpurple/Makefile.am pidgin-2.7.1//libpurple/Makefile.am
---- pidgin-2.7.1.orig//libpurple/Makefile.am	2010-05-29 21:23:57.000000000 -0400
-+++ pidgin-2.7.1//libpurple/Makefile.am	2010-07-20 23:25:59.529007791 -0400
+diff -ur pidgin-2.7.1.orig/libpurple/Makefile.am pidgin-2.7.1/libpurple/Makefile.am
+--- pidgin-2.7.1.orig/libpurple/Makefile.am	2010-05-29 21:23:57.000000000 -0400
++++ pidgin-2.7.1/libpurple/Makefile.am	2010-07-20 23:25:59.529007791 -0400
 @@ -307,6 +307,7 @@
  	$(DBUS_LIBS) \
  	$(GLIB_LIBS) \
  	$(LIBXML_LIBS) \
-+	$(GAIM_KEYRING_LIBS) \
++	$(PIDGIN_KEYRING_LIBS) \
  	$(NETWORKMANAGER_LIBS) \
  	$(INTLLIBS) \
  	$(FARSIGHT_LIBS) \
@@ -37,18 +37,18 @@ diff -ur pidgin-2.7.1.orig//libpurple/Makefile.am pidgin-2.7.1//libpurple/Makefi
  	$(GLIB_CFLAGS) \
  	$(DEBUG_CFLAGS) \
  	$(DBUS_CFLAGS) \
-+	$(GAIM_KEYRING_CFLAGS) \
++	$(PIDGIN_KEYRING_CFLAGS) \
  	$(LIBXML_CFLAGS) \
  	$(FARSIGHT_CFLAGS) \
  	$(GSTREAMER_CFLAGS) \
-diff -ur pidgin-2.7.1.orig//libpurple/account.c pidgin-2.7.1//libpurple/account.c
---- pidgin-2.7.1.orig//libpurple/account.c	2010-05-29 21:23:57.000000000 -0400
-+++ pidgin-2.7.1//libpurple/account.c	2010-07-20 23:25:59.528013217 -0400
+diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
+--- pidgin-2.7.1.orig/libpurple/account.c	2010-05-29 21:23:57.000000000 -0400
++++ pidgin-2.7.1/libpurple/account.c	2010-07-20 23:25:59.528013217 -0400
 @@ -49,6 +49,13 @@
  #define PURPLE_ACCOUNT_GET_PRIVATE(account) \
  	((PurpleAccountPrivate *) (account->priv))
  
-+#ifdef GAIM_ENABLE_KEYRING
++#ifdef PIDGIN_ENABLE_KEYRING
 +#include <gnome-keyring.h>
 +
 +static char * gaim_account_get_password_from_keyring (const char *_prpl, const char *_user);
@@ -62,7 +62,7 @@ diff -ur pidgin-2.7.1.orig//libpurple/account.c pidgin-2.7.1//libpurple/account.
  	if (purple_account_get_remember_password(account) &&
  		((tmp = purple_account_get_password(account)) != NULL))
  	{
-+#ifdef GAIM_ENABLE_KEYRING
++#ifdef PIDGIN_ENABLE_KEYRING
 +                gaim_account_set_password_in_keyring( purple_account_get_protocol_id(account),
 +                                          purple_account_get_username(account), tmp);
 +#else
@@ -88,7 +88,7 @@ diff -ur pidgin-2.7.1.orig//libpurple/account.c pidgin-2.7.1//libpurple/account.
 -		g_free(data);
 -	}
 +        gboolean got_pwd = FALSE;
-+#ifdef GAIM_ENABLE_KEYRING
++#ifdef PIDGIN_ENABLE_KEYRING
 +        data = gaim_account_get_password_from_keyring(protocol_id, name);
 +        if (data)
 +        {
@@ -119,7 +119,7 @@ diff -ur pidgin-2.7.1.orig//libpurple/account.c pidgin-2.7.1//libpurple/account.
  	purple_signals_unregister_by_instance(handle);
  }
 +
-+#ifdef GAIM_ENABLE_KEYRING
++#ifdef PIDGIN_ENABLE_KEYRING
 +static char *
 +gaim_account_get_password_from_keyring(const char *_prpl, const char *_user)
 +{
@@ -176,14 +176,14 @@ diff -ur pidgin-2.7.1.orig//libpurple/account.c pidgin-2.7.1//libpurple/account.
 +  return result == GNOME_KEYRING_RESULT_OK;
 +}
 +#endif
-diff -ur pidgin-2.7.1.orig//pidgin/Makefile.am pidgin-2.7.1//pidgin/Makefile.am
---- pidgin-2.7.1.orig//pidgin/Makefile.am	2010-05-29 21:24:00.000000000 -0400
-+++ pidgin-2.7.1//pidgin/Makefile.am	2010-07-20 23:25:59.530998309 -0400
+diff -ur pidgin-2.7.1.orig/pidgin/Makefile.am pidgin-2.7.1/pidgin/Makefile.am
+--- pidgin-2.7.1.orig/pidgin/Makefile.am	2010-05-29 21:24:00.000000000 -0400
++++ pidgin-2.7.1/pidgin/Makefile.am	2010-07-20 23:25:59.530998309 -0400
 @@ -161,6 +161,7 @@
  	$(GTKSPELL_LIBS) \
  	$(STARTUP_NOTIFICATION_LIBS) \
  	$(LIBXML_LIBS) \
-+	$(GAIM_KEYRING_LIBS) \
++	$(PIDGIN_KEYRING_LIBS) \
  	$(GTK_LIBS) \
  	$(top_builddir)/libpurple/libpurple.la
  
@@ -191,18 +191,18 @@ diff -ur pidgin-2.7.1.orig//pidgin/Makefile.am pidgin-2.7.1//pidgin/Makefile.am
  	$(GSTREAMER_CFLAGS) \
  	$(DEBUG_CFLAGS) \
  	$(GTK_CFLAGS) \
-+	$(GAIM_KEYRING_CFLAGS) \
++	$(PIDGIN_KEYRING_CFLAGS) \
  	$(DBUS_CFLAGS) \
  	$(GTKSPELL_CFLAGS) \
  	$(STARTUP_NOTIFICATION_CFLAGS) \
-diff -ur pidgin-2.7.1.orig//pidgin/gtkmain.c pidgin-2.7.1//pidgin/gtkmain.c
---- pidgin-2.7.1.orig//pidgin/gtkmain.c	2010-05-29 21:24:00.000000000 -0400
-+++ pidgin-2.7.1//pidgin/gtkmain.c	2010-07-20 23:25:59.529007791 -0400
+diff -ur pidgin-2.7.1.orig/pidgin/gtkmain.c pidgin-2.7.1/pidgin/gtkmain.c
+--- pidgin-2.7.1.orig/pidgin/gtkmain.c	2010-05-29 21:24:00.000000000 -0400
++++ pidgin-2.7.1/pidgin/gtkmain.c	2010-07-20 23:25:59.529007791 -0400
 @@ -70,6 +70,10 @@
  #include "pidginstock.h"
  #include "gtkwhiteboard.h"
  
-+#ifdef GAIM_ENABLE_KEYRING
++#ifdef PIDGIN_ENABLE_KEYRING
 +#include <gnome-keyring.h>
 +#endif
 +
@@ -213,7 +213,7 @@ diff -ur pidgin-2.7.1.orig//pidgin/gtkmain.c pidgin-2.7.1//pidgin/gtkmain.c
  	gtk_rc_add_default_file(search_path);
  	g_free(search_path);
  
-+#ifdef  GAIM_ENABLE_KEYRING
++#ifdef  PIDGIN_ENABLE_KEYRING
 +	GnomeKeyringResult rtn = gnome_keyring_unlock_sync(NULL, NULL);
 +	// if (rtn == GNOME_KEYRING_RESULT_DENIED)
 +	//   return 0;
