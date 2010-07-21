@@ -1,0 +1,8 @@
+#!/bin/bash
+
+QT_PLUGIN_PATH="/opt/Kobo/lib/qt-plugins:/opt/Kobo/lib"
+LD_LIBRARY_PATH="/opt/Kobo/lib:${LD_LIBRARY_PATH}"
+
+export QT_PLUGIN_PATH LD_LIBRARY_PATH
+
+/opt/Kobo/bin/Kobo
