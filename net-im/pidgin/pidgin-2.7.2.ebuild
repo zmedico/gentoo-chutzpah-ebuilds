@@ -14,7 +14,7 @@ SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="~alpha amd64 ~hppa ~ia64 ~ppc ~ppc64 ~sparc x86"
 IUSE="dbus debug doc eds gadu gnutls +gstreamer +gtk idn krb4 meanwhile"
 IUSE+=" networkmanager nls perl silc tcl tk spell qq sasl +startup-notification"
 IUSE+=" ncurses groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
@@ -108,10 +108,6 @@ pkg_setup() {
 		elog "You did not pick the ncurses or gtk use flags, only libpurple"
 		elog "will be built."
 		einfo
-	fi
-	if ! use xscreensaver; then
-		elog "Note: xscreensaver USE flag is disabled. Thus pidgin will be unable"
-		elog "to monitor idle/active status based on mouse/keyboard events"
 	fi
 	if use dbus && ! use python; then
 		elog "It's impossible to disable linkage with python in case dbus is enabled."
