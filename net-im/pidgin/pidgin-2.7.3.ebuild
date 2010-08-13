@@ -1,6 +1,6 @@
 # Copyright 1999-2010 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.7.2-r1.ebuild,v 1.1 2010/08/05 23:53:22 hwoarang Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.7.3.ebuild,v 1.1 2010/08/12 10:43:18 pva Exp $
 
 EAPI=2
 
@@ -118,7 +118,7 @@ pkg_setup() {
 
 src_prepare() {
 	gnome2_src_prepare
-	epatch "${FILESDIR}"/${P}-ldflags.patch
+	epatch "${FILESDIR}"/${PN}-2.7.2-ldflags.patch
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-1.patch
 	eautoreconf
 }
@@ -160,6 +160,7 @@ src_configure() {
 	fi
 
 	econf \
+		--disable-silent-rules \
 		$(use_enable ncurses consoleui) \
 		$(use_enable nls) \
 		$(use_enable gtk gtkui) \
