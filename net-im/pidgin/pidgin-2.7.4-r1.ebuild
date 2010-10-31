@@ -1,6 +1,6 @@
 # Copyright 1999-2010 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.7.4-r1.ebuild,v 1.1 2010/10/29 09:59:46 pva Exp $
 
 EAPI=2
 
@@ -123,6 +123,10 @@ pkg_setup() {
 src_prepare() {
 	gnome2_src_prepare
 	epatch "${FILESDIR}"/${PN}-2.7.3-ldflags.patch
+	epatch "${FILESDIR}"/${P}-icq-html-regression.patch
+	epatch "${FILESDIR}"/${P}-bonjour-crash.patch
+	epatch "${FILESDIR}"/${P}-missing-break-bug-12810.patch
+	epatch "${FILESDIR}"/${P}-icq-authorization-empty-nick.patch
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-1.patch
 	eautoreconf
 }
