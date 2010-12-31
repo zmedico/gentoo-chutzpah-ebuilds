@@ -1,6 +1,6 @@
 # Copyright 1999-2010 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.7.8.ebuild,v 1.1 2010/12/20 18:03:50 pva Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.7.9.ebuild,v 1.4 2010/12/30 15:29:27 jer Exp $
 
 EAPI=2
 
@@ -13,7 +13,7 @@ SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="~alpha amd64 ~arm hppa ~ia64 ppc ~ppc64 sparc x86"
 IUSE="dbus debug doc eds gadu gnutls +gstreamer +gtk idn meanwhile"
 IUSE+=" networkmanager nls perl silc tcl tk spell qq sasl +startup-notification"
 IUSE+=" ncurses groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
@@ -56,7 +56,8 @@ RDEPEND="
 	sasl? ( dev-libs/cyrus-sasl:2 )
 	networkmanager? ( net-misc/networkmanager )
 	gnome-keyring? ( gnome-base/gnome-keyring )
-	idn? ( net-dns/libidn )"
+	idn? ( net-dns/libidn )
+	!<x11-plugins/pidgin-facebookchat-1.69-r1"
 	# Mono support crashes pidgin
 	#mono? ( dev-lang/mono )"
 
