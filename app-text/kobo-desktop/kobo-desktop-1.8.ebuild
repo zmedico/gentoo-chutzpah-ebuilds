@@ -8,7 +8,8 @@ inherit eutils toolchain-funcs
 
 DESCRIPTION="Kobo Desktop application for syncing with the Kobo eReader"
 HOMEPAGE="http://www.koboereader.com"
-SRC_URI="http://dl.dropbox.com/u/2183775/kobo-desktop.deb"
+SRC_URI="http://dl.dropbox.com/u/2183775/kobo-desktop.deb
+	http://dev.gentoo.org/~chutzpah/libzip-0.9-bin32.tar.gz"
 
 LICENSE=""
 SLOT="0"
@@ -27,6 +28,7 @@ RDEPEND="x86? (
 		x11-libs/libICE
 		x11-libs/libXext
 		x11-libs/libXdmcp
+		dev-libs/libzip
 		media-libs/freetype
 		media-libs/fontconfig
 		>=sys-devel/gcc-4.4
@@ -50,6 +52,7 @@ src_install() {
 	dodir "/opt/Kobo/lib"
 	dodir "/opt/Kobo/bin"
 
+	cp -Pr "${WORKDIR}"/usr/lib32/* "${D}"/opt/Kobo/lib
 	cp -Pr "${WORKDIR}"/usr/local/Kobo/* "${D}"/opt/Kobo/lib
 	cp -Pr "${WORKDIR}"/usr/local/Trolltech/Qt-*/lib/* "${D}"/opt/Kobo/lib
 	cp -Pr "${WORKDIR}"/usr/local/Trolltech/Qt-*/plugins/ "${D}"/opt/Kobo/lib/qt-plugins
@@ -59,6 +62,9 @@ src_install() {
 
 	insinto "/usr/share/pixmaps"
 	newins usr/local/Kobo/Kobo.png kobo-icon.png
+
+	insinto "/etc/udev/rules.d"
+	newins etc/udev/rules.d/99-kobo.rules
 
 	newbin "${FILESDIR}"/kobo-1 kobo
 
