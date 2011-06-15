@@ -1,8 +1,8 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: 
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.8.0.ebuild,v 1.1 2011/06/14 10:27:08 pva Exp $
 
-EAPI=2
+EAPI=3
 
 GENTOO_DEPEND_ON_PERL=no
 inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python autotools
@@ -13,10 +13,10 @@ SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="alpha amd64 ~arm hppa ia64 ppc ppc64 sparc x86"
+KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86"
 IUSE="dbus debug doc eds gadu gnutls +gstreamer +gtk idn meanwhile"
-IUSE+=" networkmanager nls perl silc tcl tk spell qq sasl +startup-notification"
-IUSE+=" ncurses groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
+IUSE+=" networkmanager nls perl silc tcl tk spell sasl ncurses"
+IUSE+=" groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
 IUSE+=" gnome-keyring"
 
 # dbus requires python to generate C code for dbus bindings (thus DEPEND only).
@@ -26,7 +26,7 @@ IUSE+=" gnome-keyring"
 # purple-url-handler and purple-remote require dbus-python thus in reality we
 # rdepend on python if dbus enabled. But it is possible to separate this dep.
 RDEPEND="
-	>=dev-libs/glib-2.12
+	>=dev-libs/glib-2.16
 	>=dev-libs/libxml2-2.6.18
 	ncurses? ( sys-libs/ncurses[unicode]
 		dbus? ( <dev-lang/python-3 )
@@ -35,7 +35,6 @@ RDEPEND="
 		>=x11-libs/gtk+-2.10:2
 		x11-libs/libSM
 		xscreensaver? ( x11-libs/libXScrnSaver )
-		startup-notification? ( >=x11-libs/startup-notification-0.5 )
 		spell? ( >=app-text/gtkspell-2.0.2 )
 		eds? ( gnome-extra/evolution-data-server )
 		prediction? ( >=dev-db/sqlite-3.3:3 ) )
@@ -49,7 +48,7 @@ RDEPEND="
 		>=sys-apps/dbus-0.90
 		dev-python/dbus-python )
 	perl? ( >=dev-lang/perl-5.8.2-r1[-build] )
-	gadu?  ( >=net-libs/libgadu-1.9.0[-ssl] )
+	gadu? ( >=net-libs/libgadu-1.11.0[ssl,gnutls] )
 	gnutls? ( net-libs/gnutls )
 	!gnutls? ( >=dev-libs/nss-3.11 )
 	meanwhile? ( net-libs/meanwhile )
@@ -112,20 +111,25 @@ pkg_setup() {
 		elog "You did not pick the ncurses or gtk use flags, only libpurple"
 		elog "will be built."
 	fi
+	if use dbus || { use ncurses && use python; }; then
+		python_set_active_version 2
+		python_pkg_setup
+	fi
+
+	# dbus is enabled, no way to disable linkage with python => python is enabled
+	#REQUIRED_USE="gtk? ( nls ) dbus? ( python )"
 	if use gtk && ! use nls; then
 		ewarn "gtk build => nls is enabled!"
 	fi
 	if use dbus && ! use python; then
 		elog "dbus is enabled, no way to disable linkage with python => python is enabled"
 	fi
-	if use dbus || { use ncurses && use python; }; then
-		python_set_active_version 2
-		python_pkg_setup
-	fi
 }
 
 src_prepare() {
-	gnome2_src_prepare
+	# Fix build issue.
+	# http://developer.pidgin.im/viewmtn/revision/diff/9e7616dbab2878bcc9f4b412bca1f55c903a337e/with/aebefd6d98382ce0f7b42b41e4bf2611044d4182/pidgin/plugins/gevolution/gevolution.c
+	sed 's:\<GTK_POLICY_AUTO\>:GTK_POLICY_AUTOMATIC:' -i pidgin/plugins/gevolution/gevolution.c || die
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-1.patch
 	eautoreconf
 }
@@ -144,7 +148,6 @@ src_configure() {
 	fi
 
 	use silc && DYNAMIC_PRPLS+=",silc"
-	use qq && DYNAMIC_PRPLS+=",qq"
 	use meanwhile && DYNAMIC_PRPLS+=",sametime"
 	use zeroconf && DYNAMIC_PRPLS+=",bonjour"
 	use groupwise && DYNAMIC_PRPLS+=",novell"
@@ -173,7 +176,6 @@ src_configure() {
 		$(use_enable gtk sm) \
 		$(use gtk || use_enable nls) \
 		$(use gtk && echo "--enable-nls") \
-		$(use gtk && use_enable startup-notification) \
 		$(use gtk && use_enable xscreensaver screensaver) \
 		$(use gtk && use_enable prediction cap) \
 		$(use gtk && use_enable eds gevolution) \
@@ -219,5 +221,5 @@ src_install() {
 	fi
 	use perl && fixlocalpod
 
-	find "${D}" -type f -name '*.la' -exec rm -rf '{}' '+' || die "la removal failed"
+	find "${ED}" -type f -name '*.la' -exec rm -rf '{}' '+' || die "la removal failed"
 }
