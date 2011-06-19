@@ -130,6 +130,7 @@ src_prepare() {
 	# Fix build issue.
 	# http://developer.pidgin.im/viewmtn/revision/diff/9e7616dbab2878bcc9f4b412bca1f55c903a337e/with/aebefd6d98382ce0f7b42b41e4bf2611044d4182/pidgin/plugins/gevolution/gevolution.c
 	sed 's:\<GTK_POLICY_AUTO\>:GTK_POLICY_AUTOMATIC:' -i pidgin/plugins/gevolution/gevolution.c || die
+	epatch "${FILESDIR}/${P}-finch-icq.patch"
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-1.patch
 	eautoreconf
 }
@@ -193,7 +194,6 @@ src_configure() {
 		$(use_enable doc doxygen) \
 		$(use_enable networkmanager nm) \
 		$(use_enable zeroconf avahi) \
-		$(use_enable gnome-keyring) \
 		$(use_enable idn) \
 		--with-system-ssl-certs="/etc/ssl/certs/" \
 		--with-dynamic-prpls="${DYNAMIC_PRPLS}" \
