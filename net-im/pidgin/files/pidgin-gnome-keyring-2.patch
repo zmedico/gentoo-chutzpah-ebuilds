@@ -1,7 +1,7 @@
-diff -ur pidgin-2.7.1.orig/configure.ac pidgin-2.7.1/configure.ac
---- pidgin-2.7.1.orig/configure.ac	2010-05-29 21:23:56.000000000 -0400
-+++ pidgin-2.7.1/configure.ac	2010-07-20 23:25:59.520998076 -0400
-@@ -2393,6 +2393,20 @@
+diff -ur pidgin-2.8.0.orig//configure.ac pidgin-2.8.0/configure.ac
+--- pidgin-2.8.0.orig//configure.ac	2011-06-07 04:44:40.000000000 -0400
++++ pidgin-2.8.0/configure.ac	2011-06-20 10:16:33.000000000 -0400
+@@ -2379,6 +2379,20 @@
  	LDFLAGS="$orig_LDFLAGS"
  fi
  
@@ -21,29 +21,11 @@ diff -ur pidgin-2.7.1.orig/configure.ac pidgin-2.7.1/configure.ac
 +
  AC_MSG_CHECKING(for me pot o' gold)
  AC_MSG_RESULT(no)
- AC_CHECK_FUNCS(gethostid lrand48)
-diff -ur pidgin-2.7.1.orig/libpurple/Makefile.am pidgin-2.7.1/libpurple/Makefile.am
---- pidgin-2.7.1.orig/libpurple/Makefile.am	2010-05-29 21:23:57.000000000 -0400
-+++ pidgin-2.7.1/libpurple/Makefile.am	2010-07-20 23:25:59.529007791 -0400
-@@ -307,6 +307,7 @@
- 	$(DBUS_LIBS) \
- 	$(GLIB_LIBS) \
- 	$(LIBXML_LIBS) \
-+	$(PIDGIN_KEYRING_LIBS) \
- 	$(NETWORKMANAGER_LIBS) \
- 	$(INTLLIBS) \
- 	$(FARSIGHT_LIBS) \
-@@ -323,6 +324,7 @@
- 	$(GLIB_CFLAGS) \
- 	$(DEBUG_CFLAGS) \
- 	$(DBUS_CFLAGS) \
-+	$(PIDGIN_KEYRING_CFLAGS) \
- 	$(LIBXML_CFLAGS) \
- 	$(FARSIGHT_CFLAGS) \
- 	$(GSTREAMER_CFLAGS) \
-diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
---- pidgin-2.7.1.orig/libpurple/account.c	2010-05-29 21:23:57.000000000 -0400
-+++ pidgin-2.7.1/libpurple/account.c	2010-07-20 23:25:59.528013217 -0400
+ AC_CHECK_FUNCS(gethostid lrand48 timegm)
+Only in pidgin-2.8.0: configure.ac.orig
+diff -ur pidgin-2.8.0.orig//libpurple/account.c pidgin-2.8.0/libpurple/account.c
+--- pidgin-2.8.0.orig//libpurple/account.c	2011-06-07 04:44:40.000000000 -0400
++++ pidgin-2.8.0/libpurple/account.c	2011-06-20 10:19:17.000000000 -0400
 @@ -49,6 +49,13 @@
  #define PURPLE_ACCOUNT_GET_PRIVATE(account) \
  	((PurpleAccountPrivate *) (account->priv))
@@ -51,19 +33,19 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
 +#ifdef PIDGIN_ENABLE_KEYRING
 +#include <gnome-keyring.h>
 +
-+static char * gaim_account_get_password_from_keyring (const char *_prpl, const char *_user);
-+static gboolean gaim_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *password);
++static char * pidgin_account_get_password_from_keyring (const char *_prpl, const char *_user);
++static gboolean pidgin_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *password);
 +#endif
 +
  /* TODO: Should use PurpleValue instead of this?  What about "ui"? */
  typedef struct
  {
-@@ -378,8 +385,13 @@
+@@ -379,8 +386,13 @@
  	if (purple_account_get_remember_password(account) &&
  		((tmp = purple_account_get_password(account)) != NULL))
  	{
 +#ifdef PIDGIN_ENABLE_KEYRING
-+                gaim_account_set_password_in_keyring( purple_account_get_protocol_id(account),
++                pidgin_account_set_password_in_keyring(purple_account_get_protocol_id(account),
 +                                          purple_account_get_username(account), tmp);
 +#else
  		child = xmlnode_new_child(node, "password");
@@ -72,7 +54,7 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
  	}
  
  	if ((tmp = purple_account_get_alias(account)) != NULL)
-@@ -828,17 +840,30 @@
+@@ -875,17 +887,30 @@
  	}
  
  	ret = purple_account_new(name, _purple_oscar_convert(name, protocol_id)); /* XXX: */
@@ -89,7 +71,7 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
 -	}
 +        gboolean got_pwd = FALSE;
 +#ifdef PIDGIN_ENABLE_KEYRING
-+        data = gaim_account_get_password_from_keyring(protocol_id, name);
++        data = pidgin_account_get_password_from_keyring(protocol_id, name);
 +        if (data)
 +        {
 +                got_pwd = TRUE;
@@ -114,14 +96,14 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
  
  	/* Read the alias */
  	child = xmlnode_get_child(node, "alias");
-@@ -3064,3 +3089,61 @@
+@@ -3245,3 +3270,61 @@
  	purple_signals_disconnect_by_handle(handle);
  	purple_signals_unregister_by_instance(handle);
  }
 +
 +#ifdef PIDGIN_ENABLE_KEYRING
 +static char *
-+gaim_account_get_password_from_keyring(const char *_prpl, const char *_user)
++pidgin_account_get_password_from_keyring(const char *_prpl, const char *_user)
 +{
 +  GnomeKeyringNetworkPasswordData *found_item;
 +  GnomeKeyringResult               result;
@@ -156,7 +138,7 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
 +}
 +
 +static gboolean
-+gaim_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *_password)
++pidgin_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *_password)
 +{
 +  GnomeKeyringResult result;
 +  guint32            item_id;
@@ -176,28 +158,30 @@ diff -ur pidgin-2.7.1.orig/libpurple/account.c pidgin-2.7.1/libpurple/account.c
 +  return result == GNOME_KEYRING_RESULT_OK;
 +}
 +#endif
-diff -ur pidgin-2.7.1.orig/pidgin/Makefile.am pidgin-2.7.1/pidgin/Makefile.am
---- pidgin-2.7.1.orig/pidgin/Makefile.am	2010-05-29 21:24:00.000000000 -0400
-+++ pidgin-2.7.1/pidgin/Makefile.am	2010-07-20 23:25:59.530998309 -0400
-@@ -161,6 +161,7 @@
- 	$(GTKSPELL_LIBS) \
- 	$(STARTUP_NOTIFICATION_LIBS) \
+Only in pidgin-2.8.0/libpurple: account.c.orig
+diff -ur pidgin-2.8.0.orig//libpurple/Makefile.am pidgin-2.8.0/libpurple/Makefile.am
+--- pidgin-2.8.0.orig//libpurple/Makefile.am	2011-06-07 04:44:40.000000000 -0400
++++ pidgin-2.8.0/libpurple/Makefile.am	2011-06-20 10:16:33.000000000 -0400
+@@ -305,6 +305,7 @@
+ 	$(DBUS_LIBS) \
+ 	$(GLIB_LIBS) \
  	$(LIBXML_LIBS) \
 +	$(PIDGIN_KEYRING_LIBS) \
- 	$(GTK_LIBS) \
- 	$(top_builddir)/libpurple/libpurple.la
- 
-@@ -181,6 +182,7 @@
- 	$(GSTREAMER_CFLAGS) \
+ 	$(NETWORKMANAGER_LIBS) \
+ 	$(INTLLIBS) \
+ 	$(FARSIGHT_LIBS) \
+@@ -322,6 +323,7 @@
+ 	$(GLIB_CFLAGS) \
  	$(DEBUG_CFLAGS) \
- 	$(GTK_CFLAGS) \
-+	$(PIDGIN_KEYRING_CFLAGS) \
  	$(DBUS_CFLAGS) \
- 	$(GTKSPELL_CFLAGS) \
- 	$(STARTUP_NOTIFICATION_CFLAGS) \
-diff -ur pidgin-2.7.1.orig/pidgin/gtkmain.c pidgin-2.7.1/pidgin/gtkmain.c
---- pidgin-2.7.1.orig/pidgin/gtkmain.c	2010-05-29 21:24:00.000000000 -0400
-+++ pidgin-2.7.1/pidgin/gtkmain.c	2010-07-20 23:25:59.529007791 -0400
++	$(PIDGIN_KEYRING_CFLAGS) \
+ 	$(LIBXML_CFLAGS) \
+ 	$(FARSIGHT_CFLAGS) \
+ 	$(GSTREAMER_CFLAGS) \
+Only in pidgin-2.8.0/libpurple: Makefile.am.orig
+diff -ur pidgin-2.8.0.orig//pidgin/gtkmain.c pidgin-2.8.0/pidgin/gtkmain.c
+--- pidgin-2.8.0.orig//pidgin/gtkmain.c	2011-06-07 04:44:41.000000000 -0400
++++ pidgin-2.8.0/pidgin/gtkmain.c	2011-06-20 10:16:33.000000000 -0400
 @@ -70,6 +70,10 @@
  #include "pidginstock.h"
  #include "gtkwhiteboard.h"
@@ -209,7 +193,7 @@ diff -ur pidgin-2.7.1.orig/pidgin/gtkmain.c pidgin-2.7.1/pidgin/gtkmain.c
  #ifdef HAVE_SIGNAL_H
  # include <signal.h>
  #endif
-@@ -793,6 +797,12 @@
+@@ -742,6 +746,12 @@
  	gtk_rc_add_default_file(search_path);
  	g_free(search_path);
  
@@ -222,3 +206,24 @@ diff -ur pidgin-2.7.1.orig/pidgin/gtkmain.c pidgin-2.7.1/pidgin/gtkmain.c
  	gui_check = gtk_init_check(&argc, &argv);
  	if (!gui_check) {
  		char *display = gdk_get_display();
+Only in pidgin-2.8.0/pidgin: gtkmain.c.orig
+diff -ur pidgin-2.8.0.orig//pidgin/Makefile.am pidgin-2.8.0/pidgin/Makefile.am
+--- pidgin-2.8.0.orig//pidgin/Makefile.am	2011-06-07 04:44:41.000000000 -0400
++++ pidgin-2.8.0/pidgin/Makefile.am	2011-06-20 10:16:33.000000000 -0400
+@@ -157,6 +157,7 @@
+ 	$(INTLLIBS) \
+ 	$(GTKSPELL_LIBS) \
+ 	$(LIBXML_LIBS) \
++	$(PIDGIN_KEYRING_LIBS) \
+ 	$(GTK_LIBS) \
+ 	$(top_builddir)/libpurple/libpurple.la
+ 
+@@ -177,6 +178,7 @@
+ 	$(GSTREAMER_CFLAGS) \
+ 	$(DEBUG_CFLAGS) \
+ 	$(GTK_CFLAGS) \
++	$(PIDGIN_KEYRING_CFLAGS) \
+ 	$(DBUS_CFLAGS) \
+ 	$(GTKSPELL_CFLAGS) \
+ 	$(LIBXML_CFLAGS) \
+Only in pidgin-2.8.0/pidgin: Makefile.am.orig

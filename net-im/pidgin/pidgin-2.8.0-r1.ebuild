@@ -131,7 +131,8 @@ src_prepare() {
 	# http://developer.pidgin.im/viewmtn/revision/diff/9e7616dbab2878bcc9f4b412bca1f55c903a337e/with/aebefd6d98382ce0f7b42b41e4bf2611044d4182/pidgin/plugins/gevolution/gevolution.c
 	sed 's:\<GTK_POLICY_AUTO\>:GTK_POLICY_AUTOMATIC:' -i pidgin/plugins/gevolution/gevolution.c || die
 	epatch "${FILESDIR}/${P}-finch-icq.patch"
-	epatch "${FILESDIR}"/${PN}-gnome-keyring-1.patch
+
+	epatch "${FILESDIR}"/${PN}-gnome-keyring-2.patch
 	eautoreconf
 }
 
@@ -188,6 +189,7 @@ src_configure() {
 		$(use_enable dbus) \
 		$(use_enable meanwhile) \
 		$(use_enable gstreamer) \
+		$(use_enable gnome-keyring) \
 		$(use_enable gstreamer farsight) \
 		$(use_enable gstreamer vv) \
 		$(use_enable sasl cyrus-sasl ) \
