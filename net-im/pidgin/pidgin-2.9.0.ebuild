@@ -1,6 +1,6 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.8.0.ebuild,v 1.1 2011/06/14 10:27:08 pva Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.9.0.ebuild,v 1.1 2011/06/27 12:58:22 pva Exp $
 
 EAPI=3
 
@@ -48,7 +48,8 @@ RDEPEND="
 		>=sys-apps/dbus-0.90
 		dev-python/dbus-python )
 	perl? ( >=dev-lang/perl-5.8.2-r1[-build] )
-	gadu? ( >=net-libs/libgadu-1.11.0[ssl,gnutls] )
+	gadu? ( || ( >=net-libs/libgadu-1.11.0[ssl,gnutls]
+		>=net-libs/libgadu-1.11.0[-ssl] ) )
 	gnutls? ( net-libs/gnutls )
 	!gnutls? ( >=dev-libs/nss-3.11 )
 	meanwhile? ( net-libs/meanwhile )
@@ -127,11 +128,6 @@ pkg_setup() {
 }
 
 src_prepare() {
-	# Fix build issue.
-	# http://developer.pidgin.im/viewmtn/revision/diff/9e7616dbab2878bcc9f4b412bca1f55c903a337e/with/aebefd6d98382ce0f7b42b41e4bf2611044d4182/pidgin/plugins/gevolution/gevolution.c
-	sed 's:\<GTK_POLICY_AUTO\>:GTK_POLICY_AUTOMATIC:' -i pidgin/plugins/gevolution/gevolution.c || die
-	epatch "${FILESDIR}/${P}-finch-icq.patch"
-
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-2.patch
 	eautoreconf
 }
