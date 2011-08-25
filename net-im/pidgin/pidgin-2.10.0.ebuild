@@ -6,6 +6,7 @@ EAPI=3
 
 GENTOO_DEPEND_ON_PERL=no
 inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python
+inherit autotools
 
 DESCRIPTION="GTK Instant Messenger client"
 HOMEPAGE="http://pidgin.im/"
@@ -129,7 +130,7 @@ pkg_setup() {
 
 src_prepare() {
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-2.patch
-	eautoreconf
+	eautoreconf || die "eautoreconf failed"
 }
 
 src_configure() {
