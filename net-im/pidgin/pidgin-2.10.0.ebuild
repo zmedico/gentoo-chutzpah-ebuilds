@@ -1,11 +1,11 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.9.0.ebuild,v 1.1 2011/06/27 12:58:22 pva Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.0.ebuild,v 1.3 2011/08/25 14:20:26 jer Exp $
 
 EAPI=3
 
 GENTOO_DEPEND_ON_PERL=no
-inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python autotools
+inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python
 
 DESCRIPTION="GTK Instant Messenger client"
 HOMEPAGE="http://pidgin.im/"
@@ -13,7 +13,7 @@ SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~sparc ~x86"
+KEYWORDS="~alpha ~amd64 ~arm hppa ~ia64 ~ppc ~ppc64 ~sparc x86"
 IUSE="dbus debug doc eds gadu gnutls +gstreamer +gtk idn meanwhile"
 IUSE+=" networkmanager nls perl silc tcl tk spell sasl ncurses"
 IUSE+=" groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
@@ -43,7 +43,7 @@ RDEPEND="
 		>=net-libs/farsight2-0.0.14
 		media-plugins/gst-plugins-meta
 		media-plugins/gst-plugins-gconf )
-	zeroconf? ( net-dns/avahi )
+	zeroconf? ( net-dns/avahi[dbus] )
 	dbus? ( >=dev-libs/dbus-glib-0.71
 		>=sys-apps/dbus-0.90
 		dev-python/dbus-python )
