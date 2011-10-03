@@ -1,11 +1,12 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.9.0-r1.ebuild,v 1.1 2011/07/27 07:01:12 pva Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.0-r1.ebuild,v 1.1 2011/10/02 18:13:16 pva Exp $
 
 EAPI=3
 
 GENTOO_DEPEND_ON_PERL=no
-inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python autotools
+inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python
+inherit autotools
 
 DESCRIPTION="GTK Instant Messenger client"
 HOMEPAGE="http://pidgin.im/"
@@ -128,9 +129,9 @@ pkg_setup() {
 }
 
 src_prepare() {
-	epatch "${FILESDIR}/pidgin-2.9.0-conversation.c.patch"
+	epatch "${FILESDIR}/${P}-utf8-validation.patch"
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-2.patch
-	eautoreconf
+	eautoreconf || die "eautoreconf failed"
 }
 
 src_configure() {
