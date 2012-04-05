@@ -1,8 +1,8 @@
-# Copyright 1999-2011 Gentoo Foundation
+# Copyright 1999-2012 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.0.ebuild,v 1.3 2011/08/25 14:20:26 jer Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.3.ebuild,v 1.4 2012/04/03 21:55:49 ago Exp $
 
-EAPI=3
+EAPI=4
 
 GENTOO_DEPEND_ON_PERL=no
 inherit flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python
@@ -14,7 +14,7 @@ SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm hppa ~ia64 ~ppc ~ppc64 ~sparc x86"
+KEYWORDS="~alpha amd64 ~arm hppa ~ia64 ~ppc ~ppc64 ~sparc x86"
 IUSE="dbus debug doc eds gadu gnutls +gstreamer +gtk idn meanwhile"
 IUSE+=" networkmanager nls perl silc tcl tk spell sasl ncurses"
 IUSE+=" groupwise prediction python +xscreensaver zephyr zeroconf" # mono"
@@ -36,7 +36,7 @@ RDEPEND="
 		>=x11-libs/gtk+-2.10:2
 		x11-libs/libSM
 		xscreensaver? ( x11-libs/libXScrnSaver )
-		spell? ( >=app-text/gtkspell-2.0.2 )
+		spell? ( >=app-text/gtkspell-2.0.2:2 )
 		eds? ( gnome-extra/evolution-data-server )
 		prediction? ( >=dev-db/sqlite-3.3:3 ) )
 	gstreamer? ( =media-libs/gstreamer-0.10*
@@ -59,7 +59,6 @@ RDEPEND="
 	tk? ( dev-lang/tk )
 	sasl? ( dev-libs/cyrus-sasl:2 )
 	networkmanager? ( net-misc/networkmanager )
-	gnome-keyring? ( gnome-base/gnome-keyring )
 	idn? ( net-dns/libidn )
 	!<x11-plugins/pidgin-facebookchat-1.69-r1"
 	# Mono support crashes pidgin
@@ -94,6 +93,7 @@ DYNAMIC_PRPLS="irc,jabber,oscar,yahoo,simple,msn,myspace"
 #   x11-plugins/pidgin-latex
 #   x11-plugins/pidgintex
 #   x11-plugins/pidgin-libnotify
+#	x11-plugins/pidgin-mbpurple
 #	x11-plugins/pidgin-bot-sentry
 #   x11-plugins/pidgin-otr
 #   x11-plugins/pidgin-rhythmbox
@@ -101,12 +101,17 @@ DYNAMIC_PRPLS="irc,jabber,oscar,yahoo,simple,msn,myspace"
 #   x11-themes/pidgin-smileys
 #	x11-plugins/pidgin-knotify
 # Plugins in Sunrise:
-#	x11-plugins/pidgimpd
-#	x11-plugins/pidgin-birthday
+#	x11-plugins/pidgin-audacious-remote
+#	x11-plugins/pidgin-autoanswer
+#	x11-plugins/pidgin-birthday-reminder
+#	x11-plugins/pidgin-blinklight
 #	x11-plugins/pidgin-convreverse
+#	x11-plugins/pidgin-embeddedvideo
 #	x11-plugins/pidgin-extended-blist-sort
+#	x11-plugins/pidgin-gfire
 #	x11-plugins/pidgin-lastfm
-#	x11-plugins/pidgin-mbpurple
+#	x11-plugins/pidgin-sendscreenshot
+#	x11-plugins/pidgimpd
 
 pkg_setup() {
 	if ! use gtk && ! use ncurses ; then
@@ -129,6 +134,8 @@ pkg_setup() {
 }
 
 src_prepare() {
+	epatch "${FILESDIR}/${PN}-2.10.0-gold.patch"
+
 	epatch "${FILESDIR}"/${PN}-gnome-keyring-2.patch
 	eautoreconf || die "eautoreconf failed"
 }
@@ -219,6 +226,9 @@ src_install() {
 		done
 	fi
 	use perl && fixlocalpod
+
+	dodoc finch/plugins/pietray.py
+	docompress -x /usr/share/doc/${PF}/pietray.py
 
 	find "${ED}" -type f -name '*.la' -exec rm -rf '{}' '+' || die "la removal failed"
 }
