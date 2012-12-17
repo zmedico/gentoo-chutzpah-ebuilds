@@ -42,9 +42,9 @@ RDEPEND="
 		prediction? ( >=dev-db/sqlite-3.3:3 ) )
 	gstreamer? ( =media-libs/gstreamer-0.10*
 		=media-libs/gst-plugins-good-0.10*
-		|| ( net-libs/farstream net-libs/farsight2 )
-		media-plugins/gst-plugins-meta
-		media-plugins/gst-plugins-gconf )
+		|| ( net-libs/farstream:0.1 net-libs/farsight2 )
+		media-plugins/gst-plugins-meta:0.10
+		media-plugins/gst-plugins-gconf:0.10 )
 	zeroconf? ( net-dns/avahi[dbus] )
 	dbus? ( >=dev-libs/dbus-glib-0.71
 		>=sys-apps/dbus-0.90
