@@ -141,7 +141,7 @@ src_prepare() {
 	epatch "${FILESDIR}/${PN}-2.10.0-gold.patch" \
 		"${FILESDIR}/${P}-fix-cap.patch" \
 		"${FILESDIR}/${P}-link_sasl_in_irc_plugin.patch" \
-		"${FILESDIR}/${PN}-eds-3.6.patch.bz2"
+		"${FILESDIR}/${PN}-eds-3.6.patch"
 
 	epatch_user
 

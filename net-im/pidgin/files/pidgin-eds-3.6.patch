@@ -1,0 +1,330 @@
+diff --git a/pidgin/plugins/gevolution/add_buddy_dialog.c b/pidgin/plugins/gevolution/add_buddy_dialog.c
+index 0169847..216bce2 100644
+--- a/pidgin/plugins/gevolution/add_buddy_dialog.c
++++ b/pidgin/plugins/gevolution/add_buddy_dialog.c
+@@ -227,7 +227,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
+ }
+ 
+ static void
+-populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
++populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uid)
+ {
+ 	EBookQuery *query;
+ 	EBook *book;
+@@ -250,7 +250,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uri)
+ 
+ 	gtk_list_store_clear(dialog->model);
+ 
+-	if (!gevo_load_addressbook(uri, &book, &err))
++	if (!gevo_load_addressbook(uid, &book, &err))
+ 	{
+ 		purple_debug_error("evolution",
+ 						 "Error retrieving default addressbook: %s\n", err->message);
+@@ -333,16 +333,16 @@ static void
+ addrbook_change_cb(GtkComboBox *combo, GevoAddBuddyDialog *dialog)
+ {
+ 	GtkTreeIter iter;
+-	const char *esource_uri;
++	const char *esource_uid;
+ 
+ 	if (!gtk_combo_box_get_active_iter(combo, &iter))
+ 		return;
+ 
+ 	gtk_tree_model_get(GTK_TREE_MODEL(dialog->addrbooks), &iter,
+-					   ADDRBOOK_COLUMN_URI, &esource_uri,
++					   ADDRBOOK_COLUMN_UID, &esource_uid,
+ 					   -1);
+ 
+-	populate_treeview(dialog, esource_uri);
++	populate_treeview(dialog, esource_uid);
+ }
+ 
+ static void
+diff --git a/pidgin/plugins/gevolution/assoc-buddy.c b/pidgin/plugins/gevolution/assoc-buddy.c
+index cbe5f90..ae18feb 100644
+--- a/pidgin/plugins/gevolution/assoc-buddy.c
++++ b/pidgin/plugins/gevolution/assoc-buddy.c
+@@ -130,7 +130,7 @@ add_columns(GevoAssociateBuddyDialog *dialog)
+ }
+ 
+ static void
+-populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
++populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uid)
+ {
+ 	EBook *book;
+ 	EBookQuery *query;
+@@ -154,7 +154,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uri)
+ 
+ 	gtk_list_store_clear(dialog->model);
+ 
+-	if (!gevo_load_addressbook(uri, &book, &err))
++	if (!gevo_load_addressbook(uid, &book, &err))
+ 	{
+ 		purple_debug_error("evolution",
+ 						 "Error retrieving addressbook: %s\n", err->message);
+@@ -241,16 +241,16 @@ static void
+ addrbook_change_cb(GtkComboBox *combo, GevoAssociateBuddyDialog *dialog)
+ {
+ 	GtkTreeIter iter;
+-	const char *esource_uri;
++	const char *esource_uid;
+ 
+ 	if (!gtk_combo_box_get_active_iter(combo, &iter))
+ 		return;
+ 
+ 	gtk_tree_model_get(GTK_TREE_MODEL(dialog->addrbooks), &iter,
+-					   ADDRBOOK_COLUMN_URI, &esource_uri,
++					   ADDRBOOK_COLUMN_UID, &esource_uid,
+ 					   -1);
+ 
+-	populate_treeview(dialog, esource_uri);
++	populate_treeview(dialog, esource_uid);
+ }
+ 
+ static void
+diff --git a/pidgin/plugins/gevolution/eds-utils.c b/pidgin/plugins/gevolution/eds-utils.c
+index 0ecb286..dbd9b76 100644
+--- a/pidgin/plugins/gevolution/eds-utils.c
++++ b/pidgin/plugins/gevolution/eds-utils.c
+@@ -52,9 +52,9 @@ gevo_addrbooks_model_unref(GtkTreeModel *model)
+ void
+ gevo_addrbooks_model_populate(GtkTreeModel *model)
+ {
+-	ESourceList *addressbooks;
++	ESourceRegistry *registry;
+ 	GError *err = NULL;
+-	GSList *groups, *g;
++	GList *sources, *s;
+ 	GtkTreeIter iter;
+ 	GtkListStore *list;
+ 
+@@ -63,7 +63,9 @@ gevo_addrbooks_model_populate(GtkTreeModel *model)
+ 
+ 	list = GTK_LIST_STORE(model);
+ 
+-	if (!e_book_get_addressbooks(&addressbooks, &err))
++	registry = e_source_registry_new_sync(NULL, &err);
++
++	if (!registry)
+ 	{
+ 		purple_debug_error("evolution",
+ 						 "Unable to fetch list of address books.\n");
+@@ -71,57 +73,53 @@ gevo_addrbooks_model_populate(GtkTreeModel *model)
+ 		gtk_list_store_append(list, &iter);
+ 		gtk_list_store_set(list, &iter,
+ 						   ADDRBOOK_COLUMN_NAME, _("None"),
+-						   ADDRBOOK_COLUMN_URI,  NULL,
++						   ADDRBOOK_COLUMN_UID,  NULL,
+ 						   -1);
+ 
++		g_clear_error(&err);
+ 		return;
+ 	}
+ 
+-	groups = e_source_list_peek_groups(addressbooks);
++	sources = e_source_registry_list_sources(registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
+ 
+-	if (groups == NULL)
++	if (sources == NULL)
+ 	{
++		g_object_unref(registry);
+ 		gtk_list_store_append(list, &iter);
+ 		gtk_list_store_set(list, &iter,
+ 						   ADDRBOOK_COLUMN_NAME, _("None"),
+-						   ADDRBOOK_COLUMN_URI,  NULL,
++						   ADDRBOOK_COLUMN_UID,  NULL,
+ 						   -1);
+ 
+ 		return;
+ 	}
+ 
+-	for (g = groups; g != NULL; g = g->next)
++	for (s = sources; s != NULL; s = s->next)
+ 	{
+-		GSList *sources, *s;
+-
+-		sources = e_source_group_peek_sources(g->data);
+-
+-		for (s = sources; s != NULL; s = s->next)
+-		{
+-			ESource *source = E_SOURCE(s->data);
++		ESource *source = E_SOURCE(s->data);
+ 
+-			g_object_ref(source);
++		g_object_ref(source);
+ 
+-			gtk_list_store_append(list, &iter);
+-			gtk_list_store_set(list, &iter,
+-							   ADDRBOOK_COLUMN_NAME, e_source_peek_name(source),
+-							   ADDRBOOK_COLUMN_URI,  e_source_get_uri(source),
+-							   -1);
+-		}
++		gtk_list_store_append(list, &iter);
++		gtk_list_store_set(list, &iter,
++						   ADDRBOOK_COLUMN_NAME, e_source_get_display_name(source),
++						   ADDRBOOK_COLUMN_UID,  e_source_get_uid(source),
++						   -1);
+ 	}
+ 
+-	g_object_unref(addressbooks);
++	g_object_unref(registry);
++	g_list_free_full(sources, g_object_unref);
+ }
+ 
+ static EContact *
+-gevo_run_query_in_uri(const gchar *uri, EBookQuery *query)
++gevo_run_query_in_source(ESource *source, EBookQuery *query)
+ {
+ 	EBook *book;
+ 	gboolean status;
+ 	GList *cards;
+ 	GError *err = NULL;
+ 
+-	if (!gevo_load_addressbook(uri, &book, &err))
++	if (!gevo_load_addressbook_from_source(source, &book, &err))
+ 	{
+ 		purple_debug_error("evolution",
+ 						 "Error retrieving addressbook: %s\n", err->message);
+@@ -172,10 +170,10 @@ gevo_run_query_in_uri(const gchar *uri, EBookQuery *query)
+ EContact *
+ gevo_search_buddy_in_contacts(PurpleBuddy *buddy, EBookQuery *query)
+ {
+-	ESourceList *addressbooks;
++	ESourceRegistry *registry;
+ 	GError *err = NULL;
+ 	EBookQuery *full_query;
+-	GSList *groups, *g;
++	GList *sources, *s;
+ 	EContact *result;
+ 	EContactField protocol_field = gevo_prpl_get_field(buddy->account, buddy);
+ 
+@@ -207,7 +205,9 @@ gevo_search_buddy_in_contacts(PurpleBuddy *buddy, EBookQuery *query)
+ 		}
+ 	}
+ 
+-	if (!e_book_get_addressbooks(&addressbooks, &err))
++	registry = e_source_registry_new_sync(NULL, &err);
++
++	if (!registry)
+ 	{
+ 		purple_debug_error("evolution",
+ 						 "Unable to fetch list of address books.\n");
+@@ -217,30 +217,21 @@ gevo_search_buddy_in_contacts(PurpleBuddy *buddy, EBookQuery *query)
+ 		return NULL;
+ 	}
+ 
+-	groups = e_source_list_peek_groups(addressbooks);
+-	if (groups == NULL)
+-	{
+-		g_object_unref(addressbooks);
+-		e_book_query_unref(full_query);
+-		return NULL;
+-	}
++	sources = e_source_registry_list_sources(registry, E_SOURCE_EXTENSION_ADDRESS_BOOK);
+ 
+-	for (g = groups; g != NULL; g = g->next)
++	for (s = sources; s != NULL; s = s->next)
+ 	{
+-		GSList *sources, *s;
+-		sources = e_source_group_peek_sources(g->data);
+-		for (s = sources; s != NULL; s = s->next)
+-		{
+-			result = gevo_run_query_in_uri(e_source_get_uri(E_SOURCE(s->data)), full_query);
+-			if (result != NULL) {
+-			    g_object_unref(addressbooks);
+-				e_book_query_unref(full_query);
+-			    return result;
+-			}
++		result = gevo_run_query_in_source(E_SOURCE(s->data), full_query);
++		if (result != NULL) {
++		    g_object_unref(registry);
++		    g_list_free_full(sources, g_object_unref);
++			e_book_query_unref(full_query);
++		    return result;
+ 		}
+ 	}
+ 
+-	g_object_unref(addressbooks);
++	g_object_unref(registry);
++	g_list_free_full(sources, g_object_unref);
+ 	e_book_query_unref(full_query);
+ 	return NULL;
+ }
+diff --git a/pidgin/plugins/gevolution/gevo-util.c b/pidgin/plugins/gevolution/gevo-util.c
+index 8f97a7d..23ac7ed 100644
+--- a/pidgin/plugins/gevolution/gevo-util.c
++++ b/pidgin/plugins/gevolution/gevo-util.c
+@@ -124,16 +124,39 @@ gevo_prpl_is_supported(PurpleAccount *account, PurpleBuddy *buddy)
+ }
+ 
+ gboolean
+-gevo_load_addressbook(const gchar* uri, EBook **book, GError **error)
++gevo_load_addressbook(const gchar* uid, EBook **book, GError **error)
+ {
+ 	gboolean result = FALSE;
++	ESourceRegistry *registry;
++	ESource *source;
+ 
+ 	g_return_val_if_fail(book != NULL, FALSE);
+ 
+-	if (uri == NULL)
+-		*book = e_book_new_system_addressbook(error);
++	registry = e_source_registry_new_sync(NULL, error);
++
++	if (!registry)
++	    return FALSE;
++
++	if (uid == NULL)
++		source = e_source_registry_ref_default_address_book(registry);
+ 	else
+-		*book = e_book_new_from_uri(uri, error);
++		source = e_source_registry_ref_source(registry, uid);
++
++	g_object_unref(registry);
++
++	result = gevo_load_addressbook_from_source(source, book, error);
++
++	g_object_unref(source);
++
++	return result;
++}
++
++gboolean
++gevo_load_addressbook_from_source(ESource *source, EBook **book, GError **error)
++{
++	gboolean result = FALSE;
++
++	*book = e_book_new(source, error);
+ 
+ 	if (*book == NULL)
+ 		return FALSE;
+diff --git a/pidgin/plugins/gevolution/gevolution.h b/pidgin/plugins/gevolution/gevolution.h
+index 1b92b2b..1bd5208 100644
+--- a/pidgin/plugins/gevolution/gevolution.h
++++ b/pidgin/plugins/gevolution/gevolution.h
+@@ -25,12 +25,12 @@
+ # include "config.h"
+ #endif
+ 
+-#include <libebook/e-book.h>
++#include <libebook/libebook.h>
+ 
+ enum
+ {
+ 	ADDRBOOK_COLUMN_NAME,
+-	ADDRBOOK_COLUMN_URI,
++	ADDRBOOK_COLUMN_UID,
+ 	NUM_ADDRBOOK_COLUMNS
+ };
+ 
+@@ -123,7 +123,9 @@ GList *gevo_get_groups(void);
+ 
+ EContactField gevo_prpl_get_field(PurpleAccount *account, PurpleBuddy *buddy);
+ gboolean gevo_prpl_is_supported(PurpleAccount *account, PurpleBuddy *buddy);
+-gboolean gevo_load_addressbook(const gchar *uri, EBook **book, GError **error);
++gboolean gevo_load_addressbook(const gchar *uid, EBook **book, GError **error);
++gboolean gevo_load_addressbook_from_source(ESource *source, EBook **book,
++										   GError **error);
+ char *gevo_get_email_for_buddy(PurpleBuddy *buddy);
+ 
+ GevoAssociateBuddyDialog *gevo_associate_buddy_dialog_new(PurpleBuddy *buddy);
