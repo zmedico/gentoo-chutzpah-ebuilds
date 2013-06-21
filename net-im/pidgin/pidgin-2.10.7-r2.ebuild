@@ -144,6 +144,7 @@ src_prepare() {
 		"${FILESDIR}/${PN}-eds-3.6.patch"
 
 	epatch_user
+	epatch "${FILESDIR}"/pidgin-gnome-keyring-2.patch
 
 	eautoreconf
 }
