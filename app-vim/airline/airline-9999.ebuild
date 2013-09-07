@@ -8,7 +8,6 @@ inherit vim-plugin
 if [[ ${PV} == 9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/bling/vim-airline.git"
-	RESTRICT=mirror
 else
 	MY_PN=vim-${PN}
 	MY_P=${MY_PN}-${PV}
