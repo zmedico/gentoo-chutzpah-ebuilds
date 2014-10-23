@@ -1,0 +1,266 @@
+diff -ur pidgin-2.10.10.orig/configure.ac pidgin-2.10.10/configure.ac
+--- pidgin-2.10.10.orig/configure.ac	2014-10-16 17:19:33.000000000 -0700
++++ pidgin-2.10.10/configure.ac	2014-10-23 13:58:35.020155686 -0700
+@@ -2371,6 +2371,20 @@
+ 	LDFLAGS="$orig_LDFLAGS"
+ fi
+ 
++dnl #######################################################################
++dnl # Check for gnome-keyring
++dnl #--enable-gnome-keyring=(yes|no)
++dnl #######################################################################
++AC_ARG_ENABLE(gnome-keyring,
++              AC_HELP_STRING([--enable-gnome-keyring],
++                             [use gnome keyring for storing password [default=no]]),,
++              enable_gnome_keyring=no)
++if test "x$enable_gnome_keyring" = "xyes"; then
++    PKG_CHECK_MODULES(PIDGIN_KEYRING,
++                      gnome-keyring-1,
++                      AC_DEFINE(PIDGIN_ENABLE_KEYRING, [], [Set if we should use gnome-keyring]))
++fi
++
+ AC_MSG_CHECKING(for me pot o' gold)
+ AC_MSG_RESULT(no)
+ AC_CHECK_FUNCS(gethostid lrand48 timegm)
+Only in pidgin-2.10.10: configure.ac.orig
+diff -ur pidgin-2.10.10.orig/libpurple/account.c pidgin-2.10.10/libpurple/account.c
+--- pidgin-2.10.10.orig/libpurple/account.c	2014-10-16 17:19:33.000000000 -0700
++++ pidgin-2.10.10/libpurple/account.c	2014-10-23 13:58:35.043155894 -0700
+@@ -54,6 +54,13 @@
+ #define PURPLE_ACCOUNT_GET_PRIVATE(account) \
+ 	((PurpleAccountPrivate *) (account->priv))
+ 
++#ifdef PIDGIN_ENABLE_KEYRING
++#include <gnome-keyring.h>
++
++static char * pidgin_account_get_password_from_keyring (const char *_prpl, const char *_user);
++static gboolean pidgin_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *password);
++#endif
++
+ /* TODO: Should use PurpleValue instead of this?  What about "ui"? */
+ typedef struct
+ {
+@@ -393,8 +400,13 @@
+ 	if (purple_account_get_remember_password(account) &&
+ 		((tmp = purple_account_get_password(account)) != NULL))
+ 	{
++#ifdef PIDGIN_ENABLE_KEYRING
++                pidgin_account_set_password_in_keyring(purple_account_get_protocol_id(account),
++                                          purple_account_get_username(account), tmp);
++#else
+ 		child = xmlnode_new_child(node, "password");
+ 		xmlnode_insert_data(child, tmp, -1);
++#endif
+ 	} else if (_purple_account_is_password_encrypted(account)) {
+ 		const char *keyring = NULL;
+ 		const char *mode = NULL;
+@@ -909,36 +921,50 @@
+ 	}
+ 
+ 	ret = purple_account_new(name, _purple_oscar_convert(name, protocol_id)); /* XXX: */
++    gboolean got_pwd = FALSE;
++#ifdef PIDGIN_ENABLE_KEYRING
++	data = pidgin_account_get_password_from_keyring(protocol_id, name);
++	if (data)
++	{
++			got_pwd = TRUE;
++			purple_account_set_remember_password(ret, TRUE);
++			purple_account_set_password(ret, data);
++			g_free(data);
++	}
++#endif
+ 	g_free(name);
+ 	g_free(protocol_id);
+ 
+-	/* Read the password */
+-	child = xmlnode_get_child(node, "password");
+-	if (child != NULL) {
+-		const char *keyring_id = xmlnode_get_attrib(child, "keyring_id");
+-		const char *mode = xmlnode_get_attrib(child, "mode");
+-		gboolean is_plaintext;
+-
+-		data = xmlnode_get_data(child);
+-
+-		if (keyring_id == NULL || keyring_id[0] == '\0')
+-			is_plaintext = TRUE;
+-		else if (g_strcmp0(keyring_id, "keyring-internal") != 0)
+-			is_plaintext = FALSE;
+-		else if (mode == NULL || mode[0] == '\0' || g_strcmp0(mode, "cleartext") == 0)
+-			is_plaintext = TRUE;
+-		else
+-			is_plaintext = FALSE;
+-
+-		if (is_plaintext) {
+-			purple_account_set_remember_password(ret, TRUE);
+-			purple_account_set_password(ret, data);
+-		} else {
+-			purple_debug_warning("account", "found encrypted password, "
+-				"but it's not supported in 2.x.y\n");
+-			_purple_account_set_encrypted_password(ret, keyring_id, mode, data);
++    if (!got_pwd)
++	{
++		/* Read the password */
++		child = xmlnode_get_child(node, "password");
++		if (child != NULL) {
++			const char *keyring_id = xmlnode_get_attrib(child, "keyring_id");
++			const char *mode = xmlnode_get_attrib(child, "mode");
++			gboolean is_plaintext;
++
++			data = xmlnode_get_data(child);
++
++			if (keyring_id == NULL || keyring_id[0] == '\0')
++				is_plaintext = TRUE;
++			else if (g_strcmp0(keyring_id, "keyring-internal") != 0)
++				is_plaintext = FALSE;
++			else if (mode == NULL || mode[0] == '\0' || g_strcmp0(mode, "cleartext") == 0)
++				is_plaintext = TRUE;
++			else
++				is_plaintext = FALSE;
++
++			if (is_plaintext) {
++				purple_account_set_remember_password(ret, TRUE);
++				purple_account_set_password(ret, data);
++			} else {
++				purple_debug_warning("account", "found encrypted password, "
++					"but it's not supported in 2.x.y\n");
++				_purple_account_set_encrypted_password(ret, keyring_id, mode, data);
++			}
++			g_free(data);
+ 		}
+-		g_free(data);
+ 	}
+ 
+ 	/* Read the alias */
+@@ -3349,3 +3375,61 @@
+ 
+ 	return (priv->password_keyring != NULL);
+ }
++
++#ifdef PIDGIN_ENABLE_KEYRING
++static char *
++pidgin_account_get_password_from_keyring(const char *_prpl, const char *_user)
++{
++  GnomeKeyringNetworkPasswordData *found_item;
++  GnomeKeyringResult               result;
++  GList                           *matches;
++  char                            *password;
++
++  matches = NULL;
++
++  result = gnome_keyring_find_network_password_sync (
++               _user,          /* user     */
++               NULL,           /* domain   */
++               "gaim.local",   /* server   */
++               NULL,           /* object   */
++               _prpl,          /* protocol */
++               NULL,           /* authtype */
++               1863,           /* port     */
++               &matches);
++
++  if (result != GNOME_KEYRING_RESULT_OK)
++    return NULL;
++
++  if (matches == NULL || matches->data == NULL)
++    return NULL;
++
++  found_item = (GnomeKeyringNetworkPasswordData *) matches->data;
++
++  password = g_strdup (found_item->password);
++
++  gnome_keyring_network_password_list_free (matches);
++
++  return password;
++}
++
++static gboolean
++pidgin_account_set_password_in_keyring (const char *_prpl, const char *_user, const char *_password)
++{
++  GnomeKeyringResult result;
++  guint32            item_id;
++
++  result = gnome_keyring_set_network_password_sync (
++                NULL,           /* default keyring */
++                _user,          /* user            */
++                NULL,           /* domain          */
++                "gaim.local",   /* server          */
++                NULL,           /* object          */
++                _prpl,          /* protocol        */
++                NULL,           /* authtype        */
++                1863,           /* port            */
++                _password,       /* password        */
++                &item_id);
++
++  return result == GNOME_KEYRING_RESULT_OK;
++}
++#endif
+Only in pidgin-2.10.10/libpurple: account.c.orig
+Only in pidgin-2.10.10/libpurple: account.c.rej
+Only in pidgin-2.10.10/libpurple: .account.c.un~
+diff -ur pidgin-2.10.10.orig/libpurple/Makefile.am pidgin-2.10.10/libpurple/Makefile.am
+--- pidgin-2.10.10.orig/libpurple/Makefile.am	2014-10-16 17:19:33.000000000 -0700
++++ pidgin-2.10.10/libpurple/Makefile.am	2014-10-23 13:58:35.042155885 -0700
+@@ -304,6 +304,7 @@
+ 	$(DBUS_LIBS) \
+ 	$(GLIB_LIBS) \
+ 	$(LIBXML_LIBS) \
++	$(PIDGIN_KEYRING_LIBS) \
+ 	$(NETWORKMANAGER_LIBS) \
+ 	$(INTLLIBS) \
+ 	$(FARSTREAM_LIBS) \
+@@ -321,6 +322,7 @@
+ 	$(GLIB_CFLAGS) \
+ 	$(DEBUG_CFLAGS) \
+ 	$(DBUS_CFLAGS) \
++	$(PIDGIN_KEYRING_CFLAGS) \
+ 	$(LIBXML_CFLAGS) \
+ 	$(FARSTREAM_CFLAGS) \
+ 	$(GSTREAMER_CFLAGS) \
+Only in pidgin-2.10.10/libpurple: Makefile.am.orig
+diff -ur pidgin-2.10.10.orig/pidgin/gtkmain.c pidgin-2.10.10/pidgin/gtkmain.c
+--- pidgin-2.10.10.orig/pidgin/gtkmain.c	2014-10-16 17:19:33.000000000 -0700
++++ pidgin-2.10.10/pidgin/gtkmain.c	2014-10-23 13:58:35.179157129 -0700
+@@ -70,6 +70,10 @@
+ #include "pidginstock.h"
+ #include "gtkwhiteboard.h"
+ 
++#ifdef PIDGIN_ENABLE_KEYRING
++#include <gnome-keyring.h>
++#endif
++
+ #ifdef HAVE_SIGNAL_H
+ # include <signal.h>
+ #endif
+@@ -747,6 +751,12 @@
+ 	gtk_rc_add_default_file(search_path);
+ 	g_free(search_path);
+ 
++#ifdef  PIDGIN_ENABLE_KEYRING
++	GnomeKeyringResult rtn = gnome_keyring_unlock_sync(NULL, NULL);
++	// if (rtn == GNOME_KEYRING_RESULT_DENIED)
++	//   return 0;
++#endif
++
+ 	gui_check = gtk_init_check(&argc, &argv);
+ 	if (!gui_check) {
+ 		char *display = gdk_get_display();
+Only in pidgin-2.10.10/pidgin: gtkmain.c.orig
+diff -ur pidgin-2.10.10.orig/pidgin/Makefile.am pidgin-2.10.10/pidgin/Makefile.am
+--- pidgin-2.10.10.orig/pidgin/Makefile.am	2014-10-23 13:58:15.016974112 -0700
++++ pidgin-2.10.10/pidgin/Makefile.am	2014-10-23 13:58:35.179157129 -0700
+@@ -158,6 +158,7 @@
+ 	$(INTLLIBS) \
+ 	$(GTKSPELL_LIBS) \
+ 	$(LIBXML_LIBS) \
++	$(PIDGIN_KEYRING_LIBS) \
+ 	$(GTK_LIBS) \
+ 	$(top_builddir)/libpurple/libpurple.la -lm
+ 
+@@ -174,6 +175,7 @@
+ 	$(GSTREAMER_CFLAGS) \
+ 	$(DEBUG_CFLAGS) \
+ 	$(GTK_CFLAGS) \
++	$(PIDGIN_KEYRING_CFLAGS) \
+ 	$(DBUS_CFLAGS) \
+ 	$(GTKSPELL_CFLAGS) \
+ 	$(LIBXML_CFLAGS) \
+Only in pidgin-2.10.10/pidgin: Makefile.am.orig
