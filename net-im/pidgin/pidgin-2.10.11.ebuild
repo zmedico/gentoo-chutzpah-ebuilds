@@ -1,16 +1,17 @@
-# Copyright 1999-2013 Gentoo Foundation
+# Copyright 1999-2014 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.7-r2.ebuild,v 1.2 2013/06/20 14:07:40 polynomial-c Exp $
+# $Header: /var/cvsroot/gentoo-x86/net-im/pidgin/pidgin-2.10.11.ebuild,v 1.1 2014/11/25 17:07:38 polynomial-c Exp $
 
 EAPI=5
 
 GENTOO_DEPEND_ON_PERL=no
-PYTHON_COMPAT=( python2_7 )
+PYTHON_COMPAT=( python2_7 python3_3 python3_4 )
 inherit autotools flag-o-matic eutils toolchain-funcs multilib perl-app gnome2 python-single-r1
 
 DESCRIPTION="GTK Instant Messenger client"
 HOMEPAGE="http://pidgin.im/"
-SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2"
+SRC_URI="mirror://sourceforge/${PN}/${P}.tar.bz2
+	http://dev.gentoo.org/~polynomial-c/${PN}-eds-3.6.patch.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
@@ -30,7 +31,6 @@ IUSE+=" gnome-keyring"
 RDEPEND="
 	>=dev-libs/glib-2.16
 	>=dev-libs/libxml2-2.6.18
-	gnome-keyring? ( gnome-base/gnome-keyring )
 	ncurses? ( sys-libs/ncurses[unicode]
 		dbus? ( ${PYTHON_DEPS} )
 		python? ( ${PYTHON_DEPS} ) )
@@ -39,22 +39,22 @@ RDEPEND="
 		x11-libs/libSM
 		xscreensaver? ( x11-libs/libXScrnSaver )
 		spell? ( >=app-text/gtkspell-2.0.2:2 )
-		eds? ( >=gnome-extra/evolution-data-server-3.6 )
+		eds? ( >=gnome-extra/evolution-data-server-3.6:= )
 		prediction? ( >=dev-db/sqlite-3.3:3 ) )
 	gstreamer? ( =media-libs/gstreamer-0.10*
 		=media-libs/gst-plugins-good-0.10*
-		|| ( net-libs/farstream:0.1 net-libs/farsight2 )
+		net-libs/farstream:0.1
 		media-plugins/gst-plugins-meta:0.10
 		media-plugins/gst-plugins-gconf:0.10 )
 	zeroconf? ( net-dns/avahi[dbus] )
 	dbus? ( >=dev-libs/dbus-glib-0.71
 		>=sys-apps/dbus-0.90
 		dev-python/dbus-python )
-	perl? ( >=dev-lang/perl-5.8.2-r1[-build] )
+	perl? ( >=dev-lang/perl-5.16 )
 	gadu? ( || ( >=net-libs/libgadu-1.11.0[ssl,gnutls]
 		>=net-libs/libgadu-1.11.0[-ssl] ) )
 	gnutls? ( net-libs/gnutls )
-	!gnutls? ( >=dev-libs/nss-3.11 )
+	!gnutls? ( >=dev-libs/nss-3.15.4 )
 	meanwhile? ( net-libs/meanwhile )
 	silc? ( >=net-im/silc-toolkit-1.0.1 )
 	tcl? ( dev-lang/tcl )
@@ -123,7 +123,7 @@ pkg_setup() {
 		elog "You did not pick the ncurses or gtk use flags, only libpurple"
 		elog "will be built."
 	fi
-	if use dbus || { use ncurses && use python; }; then
+	if use python || use dbus ; then
 		python-single-r1_pkg_setup
 	fi
 
@@ -139,12 +139,11 @@ pkg_setup() {
 
 src_prepare() {
 	epatch "${FILESDIR}/${PN}-2.10.0-gold.patch" \
-		"${FILESDIR}/${P}-fix-cap.patch" \
-		"${FILESDIR}/${P}-link_sasl_in_irc_plugin.patch" \
-		"${FILESDIR}/${PN}-eds-3.6.patch"
-
+		"${WORKDIR}/${PN}-eds-3.6.patch" \
+		"${FILESDIR}/${PN}-2.10.9-fix-gtkmedia.patch" \
+		"${FILESDIR}/${PN}-2.10.10-eds-3.6-configure.ac.patch"
 	epatch_user
-	epatch "${FILESDIR}"/pidgin-gnome-keyring-2.patch
+	epatch "${FILESDIR}/pidgin-gnome-keyring-3.patch"
 
 	eautoreconf
 }
@@ -234,7 +233,12 @@ src_install() {
 			popd >/dev/null
 		done
 	fi
-	use perl && fixlocalpod
+	use perl && perl_delete_localpod
+
+	if use python || use dbus ; then
+		python_fix_shebang "${D}"
+		python_optimize
+	fi
 
 	dodoc finch/plugins/pietray.py
 	docompress -x /usr/share/doc/${PF}/pietray.py
