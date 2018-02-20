@@ -80,7 +80,7 @@ RDEPEND="
 	# Mono support crashes pidgin
 	#mono? ( dev-lang/mono )"
 
-RDEPEND+=" gnome-keyring? ( gnome-base/gnome-keyring )"
+RDEPEND+=" gnome-keyring? ( gnome-base/gnome-keyring gnome-base/libgnome-keyring:= )"
 
 # We want nls in case gtk is enabled, bug #
 NLS_DEPEND=">=dev-util/intltool-0.41.1 sys-devel/gettext"
